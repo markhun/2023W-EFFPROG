@@ -1,0 +1,313 @@
+<title>Project for the course Efficient Programs WS23/24</title>
+
+<h1>Project for the course Efficient Programs WS23/24</h1>
+
+You can choose an arbitrary project.
+
+<p>If you don't have any project of your own, you can choose
+the <a href="#given">given project</a> for this semester.
+
+<p>Implementing the given project has some advantages: You don't need
+to spend precious presentation time on explaining the problem, and may
+also be able to spend less on explaining the algorithm, and the
+results are directly comparable to those of other groups.  A
+disadvantage of using the given project is that you might be repeating
+what others have done and you may produce worse results (especially if
+you choose a later presentation date).  If your results are worse,
+this does not influence the grading, though; the grading is based on
+whether you demonstrate that you have applied the content of the
+course.
+
+<p>Prepare an 18-minute presentation (I recommend doing a trial run).
+You do not have as much time as I had in the lecture, so I recommend
+that you present most optimization steps only superficially, and focus
+on those steps in more detail that are particularly interesting, e.g.,
+because they produced surprisingly good or suprisingly bad results.
+</p>
+
+<h2><a name="given">Given Project:</a> Magic Hexagon</h2>
+
+<h3>Background</h3>
+
+In a <a href="https://en.wikipedia.org/wiki/Magic_hexagon">Magic
+Hexagon</a> all the numbers in each row, in each of the three
+directions sum to the same number M; in addition, in our Magic
+Hexagons, all numbers are different, and they are all from a set of
+consecutive numbers.  E.g.,
+
+<pre>
+     3  17  18
+  19   7   1  11
+16   2   5   6   9
+  12   4   8  14
+    10  13  15
+</pre>
+
+All lines sum up to M=38 in this magic hexagon.
+
+<h3>Given Program</h3>
+
+You can find the given program on the g0
+in <code>/nfs/unsafe/httpd/ftp/pub/anton/lvas/effizienz-aufgabe23/</code>
+(use <code>cp -r to copy the whole directory to your account on the
+g0</code>), or <a href="effizienz-aufgabe23.tar.gz">on the web</a>
+
+You can compile the given
+program <a href="magichex.c"><code>magichex.c</code></a>
+with <code>make</code> (you need to copy magichex.c and
+the <a href="Makefile"><code>Makefile</code></a> for this.  The
+resulting binary is called <code>magichex</code> and you can invoke it
+as follows:
+
+<pre>
+  ./magichex &lt;n&gt; &lt;d&gt; &lt;value1&gt; ... &lt;valuem&gt;
+</pre>
+
+The values are optional.  n is the size of one side of the magic
+hexagon (also called the order of the magic hexagon); it is 3 for the
+example above.  d is a parameter that influences the range of the set
+of consecutive numbers; the numbers are centered around d(2n-1); for
+the example above d=2, and the numbers are centered around 10 (from
+1-19).  I.e., you get the result above with
+
+<pre>
+  ./magichex 3 2
+</pre>
+
+or with <code>make test1</code>.  There is also a <code>make
+test2</code>, which tests <code>./magichex 3 0</code>, which produces
+26 solutions.
+
+<p>If you provide values, they fill in the hexagon starting with the
+leftmost element of the first line, then to the right, then the next
+line, and so on.  This eliminates a lot of search space, reducing the
+possible number of solutions, but also reducing the needed amount of
+search time.  E.g, if you perform</p>
+
+<pre>
+  ./magichex 3 0 -9
+</pre>
+
+you only get the 5 solutions of the 26 mentioned above where the left
+element of the top row is -9.
+
+<p>To evaluate your optimizations, start with</p>
+
+<pre>
+  perf stat -e cycles:u -e instructions:u -e branches:u -e branch-misses:u \
+  -e L1-dcache-load-misses:u ./magichex 4 3 14 33 30 34 39 6 24 20
+</pre>
+
+You can run this with an output check with <code>make measure</code>,
+or without (but showing the solutions on the terminal) with <code>make
+nocheck</code>.
+
+<p>With the given program compiled with -O3 this outputs 40 solutions
+(where all solutions are checked with <code>make measure</code>) and
+the following performance results:
+
+<pre>
+ 310194428814      cycles:u             
+ 897820790268      instructions:u        # 2.89  insn per cycle
+ 257049961217      branches:u
+   2366511820      branch-misses:u       # 0.92% of all branches
+       141455      L1-dcache-load-misses
+
+ 66.160150710 seconds time elapsed
+
+ 66.123002000 seconds user
+  0.003999000 seconds sys
+</pre>  
+
+Your optimized program has to produce the same solutions in any order;
+you do not need to preserve the output of the number of visited leafs
+(this can be considered to be another kind of performance counter).
+To compare the output for correctness, process it with
+
+<pre>
+  ./magichex ... |
+  grep -v solution|
+  awk '/^leafs visited:/ {printf("\0")} /^leafs visited:/,/^$/ {next} 1'|
+  sort -z|
+  tr '\0' '\n\n' |
+  diff -u reference-output -
+</pre>
+
+<code>make measure</code> does this.
+
+<p>I expect that your optimizations will produce vast improvements in
+run-time.  This may allow your program to solve larger problems while
+still taking &lt;90s of CPU time (user+system).  So if you improve
+your program, try larger problems by deleting some of the given values
+(starting from the right).  Of course, this may produce additional
+solutions, so you will have to generate a new reference output (after
+first checking that your program still produces the given reference
+output for the original values) for your further work, using the same
+kind of canonicalization as shown above.
+
+<p>In your presentation, please report how many values you gave for
+evaluating your best version, report the cycles:u value, and the
+number of solutions (as a weak form of comaring the correctness with
+other solutions that use the same number of given values).  Given the
+low number of cache misses, the cycles should be very representative
+and vary less than the run-time even in the face of clock frequency
+changes due to other load on the machine.
+
+<p>If you are using parallel programming to improve the elapsed time
+of your program, report the cycles:u, the CPU time and the elapsed
+time, but still report all solutions for a problem that does not take
+more than 90s of CPU time.
+
+<h3>Program explanation and suggestions</h3>
+
+This section explains how the program works and suggests some possible improvements.
+
+<p>The numbers that have to be found (as well as the numbers that are
+given) are represented in the <code>Var</code> type, which works like
+a variable in constraint logic programming: The value in the variable
+is usually not completely known, but is within bounds (represented by
+the fields <code>lo</code> and <code>hi</code>; note that the value
+of <code>hi</code> is a possible value of the variable, unlike the
+convention in many other cases in programming).  There is also the
+array <code>occupation</code> in <code>solve()</code> which tells
+which variables already contain which values, and that these values
+are therefore unavailable to other variables (because they all have to
+have different values).  While following a branch of the search tree
+towards a leaf, the bounds of the variables are tightened more and
+more, until the bounds of a variable are the same value (then the
+variable has that value), or until there is no value left for the
+variable (then there is no solution in that branch of the search
+tree).
+
+<p>These variables are involved in the following constraints:
+
+<ul>
+<li>An alldifferent constraint involving all the variables.  It
+ensures that the variables all get different values.  This constraint
+does not occur explicitly in the program, but is expressed in the
+first part of <code>solve()</code>
+
+<li>Sum constraints v1+...+vn=M for all the lines in all three
+directions through the hexagon.  You can find them as
+function <code>sum()</code>, and in the calls to this function
+inside <code>solve()</code>.
+
+<li>Lessthan constraints (vx&lt;vy) between the corners eliminate
+symmetric solutions.  You can find them in the
+function <code>lessthan()</code> and in the calls of this function
+inside <code>solve()</code>.
+</ul>
+
+<p>The two most relevant functions for understanding (and probably for
+optimizing) the program are <code>labeling()</code>
+and <code>solve()</code>.
+
+<p><code>labeling()</code> explores the search tree by trying out one
+of the possible values of a variable, and then exploring the rest of
+the search tree with <code>labeling()</code>.  If that part of the
+search tree is exhausted (whether a solution was found or not), the
+next value for the variable is tried, until all values for this
+variable have been exhausted.  Given that the search tree grows
+exponentially, there is a potential for big speedups by better
+labeling.
+
+<p>In particular, you can choose to process the variables in a
+different order (the given program processes them line by line,
+left-to-righ).  A common heuristic is to process the variable with the
+lowest number of remaining values first.  For another magic hexagon
+program, I have used a fixed ordering starting with the corners,
+because the corners are involved in two of the sum constraints with
+the least variables (i.e., few additional variables need to get a
+value to fully determine all values in the constraint), and because
+they are involved in the lessthan constraints.
+
+<p>Instead of setting a variable directly to one of its values in a
+labeling step, you can also bisect its range by first setting its
+upper bound to some middle value x, and, after exploring that branch,
+its lower bound to x+1.  The potential advantage is that you may find
+that one of these subranges does not contain a solution without
+exploring it in more depth.
+
+<p>You can get additional inspiration for possible labeling heuristics
+from <a href="https://swish.swi-prolog.org/pldoc/man?predicate=labeling/2">the
+SWI-Prolog documentation</a>.
+
+<p>One other interesting aspect of the present labeling approach is
+that it copies all variables before every choice it makes.  This is
+probably a good choice given the relatively low number of variables
+and the probably large number of changes, but a more usual
+implementation of (constraint) logic programming instead uses a
+(value) trail stack that records changes to the variables as they are
+made, and, on backtracking (returning from an
+inner <code>labeling()</code> call), all the values since the choice
+point at hand are restored from the trail stack.
+
+<p><code>solve()</code> applies all constraints to reduce the possible
+values of all variables as much as possible (within the limits of
+looking at each constraint, one at a time).  This is a polynomial
+process, but it still consumes a lot of time, and reducing that by a
+good factor will certainly help.
+
+<p>The current solver always starts from the beginning after every
+change to a variable or the <code>occupation</code> array.  It may be
+faster to process further changes before restarting the solver.
+
+<p> It also reevaluates constraints that cannot be affected by the
+changes since the last evaluation (because the changed variable is not
+involved in the constraint).  It may be faster to only reevaluate
+constraints that have been affected.  However, if most constraints
+have been affected, the overhead of recording whether a constraint is
+affected may be larger than the performance improvement.
+
+<p>If you are really brave, you implement a stronger solver, such as a
+stronger implementation of alldifferent, e.g., using the methods
+of <a href="https://www.ijcai.org/Proceedings/03/Papers/036.pdf">Lopez-Ortiz
+et al.</a>
+or <a href="https://cdn.aaai.org/AAAI/1994/AAAI94-055.pdf">Regin</a>.
+
+<p>You should not pursue all of these ideas (some of which conflict
+with each other), but select some promising ideas, implement them,
+then optimize that implementation, and report the results.
+
+<h2>Putting the results online</h2>
+
+<p>You can publish your program and its documentation (e.g., the
+presentation) by putting a project on, e.g., Github
+or <a href="https://sr.ht/">Sourcehut</a>, and putting a web page with
+a link to that project
+on <code>/nfs/unsafe/httpd/ftp/pub/anton/lvas/effizienz-abgaben/2023w</code>
+(on the g0).  Alternatively, you can also create a directory there and
+put your program and documentation there.  This web page or directory
+is visible in the web
+through <a href="../effizienz-abgaben/2023w/">this page</a>.
+
+<p>The publication of your solution is not graded, so publishing it is
+completely optional.
+
+
+<p>Project tasks from
+[<a href="../effizienz-aufgabe02.html">WS02/03</a> |
+<a href="../effizienz-aufgabe03.html">WS03/04</a> | <a
+href="../effizienz-aufgabe04.html">WS04/05</a> | <a
+href="../effizienz-aufgabe05/">WS05/06</a> | <a
+href="../effizienz-aufgabe06/">WS06/07</a> | <a
+href="../effizienz-aufgabe07/">WS07/08</a> | <a
+href="../effizienz-aufgabe08/">WS08/09</a> | <a
+href="../effizienz-aufgabe09/">WS09/10</a> | <a
+href="../effizienz-aufgabe10/">WS10/11</a> | <a
+href="../effizienz-aufgabe11/">WS11/12</a> | <a
+href="../effizienz-aufgabe12/">WS12/13</a> | <a
+href="../effizienz-aufgabe13/">WS13/14</a> | <a
+href="../effizienz-aufgabe14/">WS14/15</a> | <a
+href="../effizienz-aufgabe15/">WS15/16</a> | <a
+href="../effizienz-aufgabe16/">WS16/17</a> | <a
+href="../effizienz-aufgabe17/">WS17/18</a> | <a
+href="../effizienz-aufgabe18/">WS18/19</a> | <a
+href="../effizienz-aufgabe19/">WS19/20</a> | <a
+href="../effizienz-aufgabe20/">WS20/21</a> | <a
+href="../effizienz-aufgabe21/">WS21/22</a> | <a
+href="../effizienz-aufgabe22/">WS22/23</a> ]
+
+<hr>
+<a href="../">Anton Ertl</a>
+

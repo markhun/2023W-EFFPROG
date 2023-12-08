@@ -1,0 +1,17 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "name": "magichex 3 0",
+            "cwd": "/home/markhun/Development/2023W-EFFPROG/bin",
+            "binaryPath": "/home/markhun/Development/2023W-EFFPROG/bin/magichex",
+            "binaryArgs": ["3 0"]
+        },
+        {
+            "name": "magichex 3 2",
+            "cwd": "/home/markhun/Development/2023W-EFFPROG/bin",
+            "binaryPath": "/home/markhun/Development/2023W-EFFPROG/bin/magichex",
+            "binaryArgs": ["3 2"]
+        }
+    ],
+    "makefile.makefilePath": "./Makefile"
+}
