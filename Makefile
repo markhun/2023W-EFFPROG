@@ -41,8 +41,8 @@ test1: magichex
 	sort -z|\
 	tr '\0' '\n\n' |\
 	diff --color -u $(TESTS_DIR)/reference-output - \
-	&& echo "-------- TEST2 SUCCESSFUL! --------" \
-	|| echo "-------- TEST2 FAILED! --------"
+	&& echo "-------- TEST1 SUCCESSFUL! --------" \
+	|| echo "-------- TEST1 FAILED! --------"
 
 test2: magichex
 	@echo "Running test2: $(BIN_DIR)/magichex 3 2"
@@ -63,8 +63,8 @@ test3: magichex
 	sort -z|\
 	tr '\0' '\n\n' |\
 	diff --color -u $(TESTS_DIR)/reference-output-3-0 - \
-	&& echo "-------- TEST2 SUCCESSFUL! --------" \
-	|| echo "-------- TEST2 FAILED! --------"
+	&& echo "-------- TEST3 SUCCESSFUL! --------" \
+	|| echo "-------- TEST3 FAILED! --------"
 
 profile-with-test: magichex
 	perf stat -e cycles:u -e instructions:u -e branches:u -e branch-misses:u -e L1-dcache-load-misses:u $(BIN_DIR)/magichex 4 3 14 33 30 34 39 6 24 20 |\
