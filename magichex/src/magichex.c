@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define PLACEHOLDER_ENTRY_ID -1 // Placeholder entries are not actually part of the hexagon but used for padding.
 
@@ -145,7 +146,7 @@ CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long st
 /* reduce the ranges of the variables as much as possible (with the
    constraints we use);  returns 1 if all variables still have a
    non-empty range left, 0 if one has an empty range */
-int solve(unsigned long n, long d, HexagonEntry hexagon[])
+bool solve(unsigned long n, long d, HexagonEntry hexagon[])
 {
   unsigned long r = 2*n-1;
   unsigned long H = 3*n*n-3*n+1;
@@ -164,7 +165,7 @@ int solve(unsigned long n, long d, HexagonEntry hexagon[])
     HexagonEntry *hexagonEntry = &hexagon[i];
     if (hexagonEntry->lo == hexagonEntry->hi && occupation[hexagonEntry->lo-o] != i) {
       if (occupation[hexagonEntry->lo-o] < r*r)
-        return 0; /* another variable has the same value */
+        return false; /* another variable has the same value */
       occupation[hexagonEntry->lo-o] = i; /* occupy hexagonEntry->lo */
       goto restart;
     }
@@ -187,14 +188,14 @@ int solve(unsigned long n, long d, HexagonEntry hexagon[])
      one (eliminate rotational symmetry) */
   for (i=1; i<sizeof(corners)/sizeof(corners[0]); i++) {
     CHANGE_IDENTIFIER f = lessthan(&hexagon[corners[0]],&hexagon[corners[i]]);
-    if (f==NOSOLUTION) return 0;
+    if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
   }
   /* eliminate the mirror symmetry between the corners to the right
      and left of the first corner */
   {
     CHANGE_IDENTIFIER f = lessthan(&hexagon[corners[2]],&hexagon[corners[1]]); 
-    if (f==NOSOLUTION) return 0;
+    if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
   }
   /* sum constraints: each line and diagonal sums up to M */
@@ -203,18 +204,18 @@ int solve(unsigned long n, long d, HexagonEntry hexagon[])
     CHANGE_IDENTIFIER f;
     /* line */
     f = sum(hexagon+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, M, hexagon, hexagon+r*r);
-    if (f==NOSOLUTION) return 0;
+    if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
     /* column (diagonal down-left in the hexagon) */
     f = sum(hexagon+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, M, hexagon, hexagon+r*r);
-    if (f==NOSOLUTION) return 0;
+    if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
     /* diagonal (down-right) */
     f = sum(hexagon-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, M, hexagon, hexagon+r*r);
-    if (f==NOSOLUTION) return 0;
+    if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
   }
-  return 1;
+  return true;  // all done
 }
 
 void printhexagon(unsigned long n, HexagonEntry hexagon[])
