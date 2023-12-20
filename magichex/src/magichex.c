@@ -65,44 +65,45 @@ long max(long a, long b)
 
    2 if there was no change 
 */
+typedef enum RESULTTYPE { NOSOLUTION = 0, CHANGED = 1, NOCHANGE = 2 } CHANGE_IDENTIFIER;  
 
 
-int sethi(HexagonEntry *hexagonEntry, long x) {
+CHANGE_IDENTIFIER sethi(HexagonEntry *hexagonEntry, long x) {
   assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
   if (x < hexagonEntry->hi) {
     hexagonEntry->hi = x;
     if (hexagonEntry->lo <= hexagonEntry->hi)
-      return 1;
+      return CHANGED;
     else
-      return 0;
+      return NOCHANGE;
   }
-  return 2;
+  return NOCHANGE;
 }
 
-int setlo(HexagonEntry *hexagonEntry, long x) {
+CHANGE_IDENTIFIER setlo(HexagonEntry *hexagonEntry, long x) {
   assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
   if (x > hexagonEntry->lo) {
     hexagonEntry->lo = x;
     if (hexagonEntry->lo <= hexagonEntry->hi)
-      return 1;
+      return CHANGED;
     else
-      return 0;
+      return NOSOLUTION;
   }
-  return 2;
+  return NOCHANGE;
 }
 
-/* returns 0 if there is no solution, 1 if one of the variables has changed */
-int lessthan(HexagonEntry *v1, HexagonEntry *v2)
+/* returns NOSOLUTION if there is no solution, CHANGED if one of the variables has changed */
+CHANGE_IDENTIFIER lessthan(HexagonEntry *v1, HexagonEntry *v2)
 {
   assert(v1->id != PLACEHOLDER_ENTRY_ID);
   assert(v2->id != PLACEHOLDER_ENTRY_ID);
-  int f = sethi(v1, v2->hi-1);
-  if (f < 2)
+  CHANGE_IDENTIFIER f = sethi(v1, v2->hi-1);
+  if (f == NOSOLUTION || f == CHANGED)
     return f;
   return (setlo(v2, v1->lo+1));
 }
 
-int sum(HexagonEntry hexagon[], unsigned long nv, unsigned long stride, long sum,
+CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long stride, long sum,
         HexagonEntry *hexagonStart, HexagonEntry *hexagonEnd)
 {
   unsigned long i;
@@ -128,17 +129,17 @@ int sum(HexagonEntry hexagon[], unsigned long nv, unsigned long stride, long sum
   }
   /* hi is the upper bound of sum-sum(hexagon), lo the lower bound */
   for (i=0, hexagonEntry_p=hexagon; i<nv; i++, hexagonEntry_p+=stride) {
-    int f = sethi(hexagonEntry_p,hi+hexagonEntry_p->lo); /* readd hexagonEntry_p->lo to get an upper bound of hexagonEntry_p */
+    CHANGE_IDENTIFIER f = sethi(hexagonEntry_p,hi+hexagonEntry_p->lo); /* readd hexagonEntry_p->lo to get an upper bound of hexagonEntry_p */
     assert(hexagonEntry_p>=hexagonStart);
     assert(hexagonEntry_p<hexagonEnd);
     assert(hexagonEntry_p->id != PLACEHOLDER_ENTRY_ID);
-    if (f < 2)
+    if (f == NOSOLUTION || f == CHANGED)
       return f;
     f = setlo(hexagonEntry_p,lo+hexagonEntry_p->hi); /* likewise, readd hexagonEntry_p->hi */
-    if (f < 2)
+    if (f == NOSOLUTION || f == CHANGED)
       return f;
   }
-  return 2;
+  return NOCHANGE;
 }
     
 /* reduce the ranges of the variables as much as possible (with the
@@ -185,33 +186,33 @@ int solve(unsigned long n, long d, HexagonEntry hexagon[])
   /* the < constraints; all other corners are smaller than the first
      one (eliminate rotational symmetry) */
   for (i=1; i<sizeof(corners)/sizeof(corners[0]); i++) {
-    int f = lessthan(&hexagon[corners[0]],&hexagon[corners[i]]);
-    if (f==0) return 0;
-    if (f==1) goto restart;
+    CHANGE_IDENTIFIER f = lessthan(&hexagon[corners[0]],&hexagon[corners[i]]);
+    if (f==NOSOLUTION) return 0;
+    if (f==CHANGED) goto restart;
   }
   /* eliminate the mirror symmetry between the corners to the right
      and left of the first corner */
   {
-    int f = lessthan(&hexagon[corners[2]],&hexagon[corners[1]]); 
-    if (f==0) return 0;
-    if (f==1) goto restart;
+    CHANGE_IDENTIFIER f = lessthan(&hexagon[corners[2]],&hexagon[corners[1]]); 
+    if (f==NOSOLUTION) return 0;
+    if (f==CHANGED) goto restart;
   }
   /* sum constraints: each line and diagonal sums up to M */
   /* line sum constraints */
   for (i=0; i<r; i++) {
-    int f;
+    CHANGE_IDENTIFIER f;
     /* line */
     f = sum(hexagon+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, M, hexagon, hexagon+r*r);
-    if (f==0) return 0;
-    if (f==1) goto restart;
+    if (f==NOSOLUTION) return 0;
+    if (f==CHANGED) goto restart;
     /* column (diagonal down-left in the hexagon) */
     f = sum(hexagon+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, M, hexagon, hexagon+r*r);
-    if (f==0) return 0;
-    if (f==1) goto restart;
+    if (f==NOSOLUTION) return 0;
+    if (f==CHANGED) goto restart;
     /* diagonal (down-right) */
     f = sum(hexagon-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, M, hexagon, hexagon+r*r);
-    if (f==0) return 0;
-    if (f==1) goto restart;
+    if (f==NOSOLUTION) return 0;
+    if (f==CHANGED) goto restart;
   }
   return 1;
 }
