@@ -3,14 +3,16 @@
 #include <assert.h>
 #include <string.h>
 
-typedef struct var Var;
+#define PLACEHOLDER_ENTRY_ID -1 // Placeholder entries are not actually part of the hexagon but used for padding.
 
 /* constraint variable; if lo==hi, this is the variable's value */
-typedef struct var {
-  long id; /* variable id; id<0 if the variable is not part of the hexagon */
+struct hexagonEntry {
+  long id; /* variable id; id == PLACEHOLDER_ENTRY_ID if the variable is not part of the hexagon */
   long lo; /* lower bound */
   long hi; /* upper bound */
-} Var;
+};
+
+typedef struct hexagonEntry HexagonEntry;
 
 /* representation of a hexagon of order n: (2n-1)^2 square array
    for a hexagon of order 2:
@@ -22,9 +24,10 @@ typedef struct var {
     C D E
     . F G
    The . slots have lo>hi.
+   The . slots have id == PLACEHOLDER_ENTRY_ID
 
    The variable array is organized as a single-dimension array with accesses
-   vs[y*r+x]
+   hexagon[y*r+x]
    This allows to access the diagonal with stride 2*order
 
    Variable names n, r, H, S according to German Wikipedia Article
@@ -64,11 +67,11 @@ long max(long a, long b)
 */
 
 
-int sethi(Var *v, long x) {
-  assert(v->id >= 0);
-  if (x < v->hi) {
-    v->hi = x;
-    if (v->lo <= v->hi)
+int sethi(HexagonEntry *hexagonEntry, long x) {
+  assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
+  if (x < hexagonEntry->hi) {
+    hexagonEntry->hi = x;
+    if (hexagonEntry->lo <= hexagonEntry->hi)
       return 1;
     else
       return 0;
@@ -76,11 +79,11 @@ int sethi(Var *v, long x) {
   return 2;
 }
 
-int setlo(Var *v, long x) {
-  assert(v->id >= 0);
-  if (x > v->lo) {
-    v->lo = x;
-    if (v->lo <= v->hi)
+int setlo(HexagonEntry *hexagonEntry, long x) {
+  assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
+  if (x > hexagonEntry->lo) {
+    hexagonEntry->lo = x;
+    if (hexagonEntry->lo <= hexagonEntry->hi)
       return 1;
     else
       return 0;
@@ -89,49 +92,49 @@ int setlo(Var *v, long x) {
 }
 
 /* returns 0 if there is no solution, 1 if one of the variables has changed */
-int lessthan(Var *v1, Var *v2)
+int lessthan(HexagonEntry *v1, HexagonEntry *v2)
 {
-  assert(v1->id >= 0);
-  assert(v2->id >= 0);
+  assert(v1->id != PLACEHOLDER_ENTRY_ID);
+  assert(v2->id != PLACEHOLDER_ENTRY_ID);
   int f = sethi(v1, v2->hi-1);
   if (f < 2)
     return f;
   return (setlo(v2, v1->lo+1));
 }
 
-int sum(Var vs[], unsigned long nv, unsigned long stride, long sum,
-        Var *vsstart, Var *vsend)
+int sum(HexagonEntry hexagon[], unsigned long nv, unsigned long stride, long sum,
+        HexagonEntry *hexagonStart, HexagonEntry *hexagonEnd)
 {
   unsigned long i;
   long hi = sum;
   long lo = sum;
-  Var *vp;
+  HexagonEntry *hexagonEntry_p;
 #if 0
-  printf("sum(vsstart+%ld, %lu, %lu, %ld, vsstart, vsstart+%ld)   ",vs-vsstart,nv,stride,sum,vsend-vsstart); fflush(stdout);
-  for (i=0, vp=vs; i<nv; i++, vp+=stride) {
-    assert(vp>=vsstart);
-    assert(vp<vsend);
-    assert(vp->id >= 0);
-    printf("v%ld ",vp->id);
+  printf("sum(hexagonStart+%ld, %lu, %lu, %ld, hexagonStart, hexagonStart+%ld)   ",hexagon-hexagonStart,nv,stride,sum,hexagonEnd-hexagonStart); fflush(stdout);
+  for (i=0, hexagonEntry_p=hexagon; i<nv; i++, hexagonEntry_p+=stride) {
+    assert(hexagonEntry_p>=hexagonStart);
+    assert(hexagonEntry_p<hexagonEnd);
+    assert(hexagonEntry_p->id != PLACEHOLDER_ENTRY_ID);
+    printf("hexagonEntry%ld ",hexagonEntry_p->id);
   }
   printf("\n");
 #endif
-  for (i=0, vp=vs; i<nv; i++, vp+=stride) {
-    assert(vp>=vsstart);
-    assert(vp<vsend);
-    assert(vp->id >= 0);
-    hi -= vp->lo;
-    lo -= vp->hi;
+  for (i=0, hexagonEntry_p=hexagon; i<nv; i++, hexagonEntry_p+=stride) {
+    assert(hexagonEntry_p>=hexagonStart);
+    assert(hexagonEntry_p<hexagonEnd);
+    assert(hexagonEntry_p->id != PLACEHOLDER_ENTRY_ID);
+    hi -= hexagonEntry_p->lo;
+    lo -= hexagonEntry_p->hi;
   }
-  /* hi is the upper bound of sum-sum(vs), lo the lower bound */
-  for (i=0, vp=vs; i<nv; i++, vp+=stride) {
-    int f = sethi(vp,hi+vp->lo); /* readd vp->lo to get an upper bound of vp */
-    assert(vp>=vsstart);
-    assert(vp<vsend);
-    assert(vp->id >= 0);
+  /* hi is the upper bound of sum-sum(hexagon), lo the lower bound */
+  for (i=0, hexagonEntry_p=hexagon; i<nv; i++, hexagonEntry_p+=stride) {
+    int f = sethi(hexagonEntry_p,hi+hexagonEntry_p->lo); /* readd hexagonEntry_p->lo to get an upper bound of hexagonEntry_p */
+    assert(hexagonEntry_p>=hexagonStart);
+    assert(hexagonEntry_p<hexagonEnd);
+    assert(hexagonEntry_p->id != PLACEHOLDER_ENTRY_ID);
     if (f < 2)
       return f;
-    f = setlo(vp,lo+vp->hi); /* likewise, readd vp->hi */
+    f = setlo(hexagonEntry_p,lo+hexagonEntry_p->hi); /* likewise, readd hexagonEntry_p->hi */
     if (f < 2)
       return f;
   }
@@ -141,14 +144,14 @@ int sum(Var vs[], unsigned long nv, unsigned long stride, long sum,
 /* reduce the ranges of the variables as much as possible (with the
    constraints we use);  returns 1 if all variables still have a
    non-empty range left, 0 if one has an empty range */
-int solve(unsigned long n, long d, Var vs[])
+int solve(unsigned long n, long d, HexagonEntry hexagon[])
 {
   unsigned long r = 2*n-1;
   unsigned long H = 3*n*n-3*n+1;
   long M = d*H;
   long o = d*r - (H-1)/2; /* offset in occupation array */
-  unsigned long occupation[H]; /* if vs[i] has value x, occupation[x-o]==i, 
-                                  if no vs[*] has value x, occupation[x-o]==H*/
+  unsigned long occupation[H]; /* if hexagon[i] has value x, occupation[x-o]==i, 
+                                  if no hexagon[*] has value x, occupation[x-o]==H */
   unsigned long corners[] = {0, n-1, (n-1)*r+0, (n-1)*r+r-1, (r-1)*r+n-1, (r-1)*r+r-1};
   unsigned long i;
   //printf("(re)start\n");
@@ -157,24 +160,24 @@ int solve(unsigned long n, long d, Var vs[])
     occupation[i] = r*r;
  restart:
   for (i=0; i<r*r; i++) {
-    Var *v = &vs[i];
-    if (v->lo == v->hi && occupation[v->lo-o] != i) {
-      if (occupation[v->lo-o] < r*r)
+    HexagonEntry *hexagonEntry = &hexagon[i];
+    if (hexagonEntry->lo == hexagonEntry->hi && occupation[hexagonEntry->lo-o] != i) {
+      if (occupation[hexagonEntry->lo-o] < r*r)
         return 0; /* another variable has the same value */
-      occupation[v->lo-o] = i; /* occupy v->lo */
+      occupation[hexagonEntry->lo-o] = i; /* occupy hexagonEntry->lo */
       goto restart;
     }
   }
   /* now propagate the alldifferent results to the bounds */
   for (i=0; i<r*r; i++) {
-    Var *v = &vs[i];
-    if (v->lo < v->hi) {
-      if (occupation[v->lo-o] < r*r) {
-        v->lo++;
+    HexagonEntry *hexagonEntry = &hexagon[i];
+    if (hexagonEntry->lo < hexagonEntry->hi) {
+      if (occupation[hexagonEntry->lo-o] < r*r) {
+        hexagonEntry->lo++;
         goto restart;
       }
-      if (occupation[v->hi-o] < r*r) {
-        v->hi--;
+      if (occupation[hexagonEntry->hi-o] < r*r) {
+        hexagonEntry->hi--;
         goto restart;
       }
     }
@@ -182,14 +185,14 @@ int solve(unsigned long n, long d, Var vs[])
   /* the < constraints; all other corners are smaller than the first
      one (eliminate rotational symmetry) */
   for (i=1; i<sizeof(corners)/sizeof(corners[0]); i++) {
-    int f = lessthan(&vs[corners[0]],&vs[corners[i]]);
+    int f = lessthan(&hexagon[corners[0]],&hexagon[corners[i]]);
     if (f==0) return 0;
     if (f==1) goto restart;
   }
   /* eliminate the mirror symmetry between the corners to the right
      and left of the first corner */
   {
-    int f = lessthan(&vs[corners[2]],&vs[corners[1]]); 
+    int f = lessthan(&hexagon[corners[2]],&hexagon[corners[1]]); 
     if (f==0) return 0;
     if (f==1) goto restart;
   }
@@ -198,22 +201,22 @@ int solve(unsigned long n, long d, Var vs[])
   for (i=0; i<r; i++) {
     int f;
     /* line */
-    f = sum(vs+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, M, vs, vs+r*r);
+    f = sum(hexagon+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, M, hexagon, hexagon+r*r);
     if (f==0) return 0;
     if (f==1) goto restart;
     /* column (diagonal down-left in the hexagon) */
-    f = sum(vs+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, M, vs, vs+r*r);
+    f = sum(hexagon+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, M, hexagon, hexagon+r*r);
     if (f==0) return 0;
     if (f==1) goto restart;
     /* diagonal (down-right) */
-    f = sum(vs-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, M, vs, vs+r*r);
+    f = sum(hexagon-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, M, hexagon, hexagon+r*r);
     if (f==0) return 0;
     if (f==1) goto restart;
   }
   return 1;
 }
 
-void printhexagon(unsigned long n, Var vs[])
+void printhexagon(unsigned long n, HexagonEntry hexagon[])
 {
   unsigned long i,j;
   unsigned r=2*n-1;
@@ -229,72 +232,72 @@ void printhexagon(unsigned long n, Var vs[])
     for (j=l; j<h; j++) {
       assert(i<r);
       assert(j<r);
-      Var *v=&vs[i*r+j];
-      assert(v->lo <= v->hi);
+      HexagonEntry *hexagonEntry=&hexagon[i*r+j];
+      assert(hexagonEntry->lo <= hexagonEntry->hi);
 #if 0
-      printf("%6ld  ",v->id);
+      printf("%6ld  ",hexagonEntry->id);
 #else
-      if (v->lo < v->hi)
-        printf("%4ld-%-3ld",v->lo,v->hi);
+      if (hexagonEntry->lo < hexagonEntry->hi)
+        printf("%4ld-%-3ld",hexagonEntry->lo,hexagonEntry->hi);
       else
-        printf("%6ld  ",v->lo);
+        printf("%6ld  ",hexagonEntry->lo);
 #endif
     }
     printf("\n");
   }
 }
 
-/* assign values to vs[index] and all later variables in vs such that
+/* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
-void labeling(unsigned long n, long d, Var vs[], unsigned long index)
+void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index)
 {
   long i;
   unsigned long r = 2*n-1;
-  Var *vp = vs+index;
+  HexagonEntry *hexagonEntry = &hexagon[index];
   if (index >= r*r) {
-    printhexagon(n,vs);
+    printhexagon(n,hexagon);
     solutions++;
     leafs++;
     printf("leafs visited: %lu\n\n",leafs);
     return;
   }
-  if (vp->id < 0)
-    return labeling(n,d,vs,index+1);
-  for (i = vp->lo; i <= vp->hi; i++) {
-    Var newvs[r*r];
-    Var* newvp=newvs+index;
-    memmove(newvs,vs,r*r*sizeof(Var));
-    newvp->lo = i;
-    newvp->hi = i;
+  if (hexagonEntry->id == PLACEHOLDER_ENTRY_ID)
+    // call labeling again as we do not need to process placeholders
+    return labeling(n,d,hexagon,index+1); 
+  for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
+    HexagonEntry newHexagon[r*r];
+    HexagonEntry* newHexagonEntry = &newHexagon[index];
+    memmove(newHexagon,hexagon,r*r*sizeof(HexagonEntry));
+    newHexagonEntry->lo = i;
+    newHexagonEntry->hi = i;
 #if 0
-    for (Var *v = newvs; v<=newvp; v++) {
-      if (v->id >= 0) {
-        assert(v->lo == v->hi);
-        printf(" %ld",v->lo); fflush(stdout);
+    for (HexagonEntry *hexagonEntry = newHexagon; hexagonEntry<=newHexagonEntry; hexagonEntry++) {
+      if (hexagonEntry->id != PLACEHOLDER_ENTRY_ID) {
+        assert(hexagonEntry->lo == hexagonEntry->hi);
+        printf(" %ld",hexagonEntry->lo); fflush(stdout);
       }
     }
     printf("\n");
 #endif
-    if (solve(n,d,newvs))
-      labeling(n,d,newvs,index+1);
+    if (solve(n,d,newHexagon))
+      labeling(n,d,newHexagon,index+1);
     else
       leafs++;
   }
 }
 
-Var *makehexagon(unsigned long n, long d)
+HexagonEntry *makehexagon(unsigned long n, long d)
 {
   unsigned long i,j;
   unsigned long r = 2*n-1;
   unsigned long H = 3*n*n-3*n+1;
   
-  Var *vs = calloc(r*r,sizeof(Var));
+  HexagonEntry *hexagon = calloc(r*r,sizeof(HexagonEntry));
   unsigned long id = 0;
   for (i=0; i<r*r; i++) {
-    Var *v = &vs[i];
-    v->id = -1;
-    v->lo = 1;
-    v->hi = 0;
+    hexagon[i].id = PLACEHOLDER_ENTRY_ID;
+    hexagon[i].lo = 1;
+    hexagon[i].hi = 0;
   }
   for (i=0; i<r; i++) {
     unsigned long l=0;
@@ -306,14 +309,13 @@ Var *makehexagon(unsigned long n, long d)
     for (j=l; j<h; j++) {
       assert(i<r);
       assert(j<r);
-      Var *v=&vs[i*r+j];
-      assert(v->lo>v->hi);
-      v->id = id++;
-      v->lo = d*r - (H-1)/2;
-      v->hi = d*r + (H-1)/2;
+      assert(hexagon[i*r+j].lo>hexagon[i*r+j].hi);
+      hexagon[i*r+j].id = id++;
+      hexagon[i*r+j].lo = d*r - (H-1)/2;
+      hexagon[i*r+j].hi = d*r + (H-1)/2;
     }
   }
-  return vs;
+  return hexagon;
 }
 
 int main(int argc, char *argv[])
@@ -332,16 +334,16 @@ int main(int argc, char *argv[])
     exit(1);
   }
   d = strtol(argv[2],NULL,10);
-  Var *vs = makehexagon(n,d);
+  HexagonEntry *hexagon = makehexagon(n,d);
   for (i=3; i<argc; i++) {
-    while (vs[j].id < 0)
-      j++;
-    vs[j].lo = vs[j].hi = strtol(argv[i],NULL,10);
+    while (hexagon[j].id == PLACEHOLDER_ENTRY_ID)
+      j++; // skip this entry as it is a placeholder
+    hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(n,d,vs,0);
+  labeling(n,d,hexagon,0);
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
-  //(void)solve(n, d, vs);
-  //printhexagon(n, vs);
+  //(void)solve(n, d, hexagon);
+  //printhexagon(n, hexagon);
   return 0;
 }
