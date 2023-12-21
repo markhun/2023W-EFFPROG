@@ -167,7 +167,7 @@ bool solve(unsigned long n, long d, HexagonEntry hexagon[])
       if (occupation[hexagonEntry->lo-o] < r*r)
         return false; /* another variable has the same value */
       occupation[hexagonEntry->lo-o] = i; /* occupy hexagonEntry->lo */
-      goto restart;
+      //goto restart;
     }
   }
   /* now propagate the alldifferent results to the bounds */
