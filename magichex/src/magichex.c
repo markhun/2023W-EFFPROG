@@ -170,19 +170,23 @@ bool solve(unsigned long n, long d, HexagonEntry hexagon[])
       //goto restart;
     }
   }
+  bool k = false;
   /* now propagate the alldifferent results to the bounds */
   for (i=0; i<r*r; i++) {
     HexagonEntry *hexagonEntry = &hexagon[i];
     if (hexagonEntry->lo < hexagonEntry->hi) {
       if (occupation[hexagonEntry->lo-o] < r*r) {
         hexagonEntry->lo++;
-        goto restart;
+        k = true;
       }
       if (occupation[hexagonEntry->hi-o] < r*r) {
         hexagonEntry->hi--;
-        goto restart;
+        k = true;
       }
     }
+  }
+  if(k){
+    goto restart;
   }
   /* the < constraints; all other corners are smaller than the first
      one (eliminate rotational symmetry) */
