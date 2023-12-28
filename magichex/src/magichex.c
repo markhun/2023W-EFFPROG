@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #define PLACEHOLDER_ENTRY_ID -1 // Placeholder entries are not actually part of the hexagon but used for padding.
 
@@ -255,7 +256,7 @@ void printhexagon(unsigned long n, HexagonEntry hexagon[])
 
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
-void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index)
+/*void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index)
 {
   long i;
   unsigned long r = 2*n-1;
@@ -287,6 +288,55 @@ void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long ind
 #endif
     if (solve(n,d,newHexagon))
       labeling(n,d,newHexagon,index+1);
+    else
+      leafs++;
+  }
+}*/
+
+unsigned long nextIndex(unsigned long n, HexagonEntry hexagon[])
+{
+  unsigned long i;
+  unsigned long r = 2*n-1;
+  unsigned long scope;
+  unsigned long minScope = ULONG_MAX;
+  unsigned long minIndex = -1;
+
+  for (i=0; i < r*r; i++) {
+    scope = hexagon[i].hi - hexagon[i].lo;
+    if (hexagon[i].id != PLACEHOLDER_ENTRY_ID && 0 < scope && scope < minScope) {
+       minScope = scope;
+       minIndex = i;
+    }
+  }
+
+  return minIndex;
+}
+
+void labeling(unsigned long n, long d, HexagonEntry hexagon[])
+{
+  long i;
+  unsigned long r = 2*n-1;
+  unsigned long index = nextIndex(n,hexagon);
+
+  if (index == -1) {
+    printhexagon(n,hexagon);
+    solutions++;
+    leafs++;
+    printf("leafs visited: %lu\n\n",leafs);
+    return;
+  }
+
+  HexagonEntry *hexagonEntry = &hexagon[index];
+
+  for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
+    HexagonEntry newHexagon[r*r];
+    HexagonEntry* newHexagonEntry = &newHexagon[index];
+    memmove(newHexagon,hexagon,r*r*sizeof(HexagonEntry));
+    newHexagonEntry->lo = i;
+    newHexagonEntry->hi = i;
+
+    if (solve(n,d,newHexagon))
+      labeling(n,d,newHexagon);
     else
       leafs++;
   }
@@ -347,7 +397,7 @@ int main(int argc, char *argv[])
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(n,d,hexagon,0);
+  labeling(n,d,hexagon);
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
