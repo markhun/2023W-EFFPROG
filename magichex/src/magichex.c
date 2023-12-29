@@ -253,7 +253,7 @@ void printhexagon(unsigned long n, HexagonEntry hexagon[])
   }
 }
 
-unsigned long spiralPermutation(unsigned long n, unsigned long r, unsigned long i)
+/*unsigned long spiralPermutation(unsigned long n, unsigned long r, unsigned long i)
 {
   unsigned long index;
 
@@ -271,14 +271,53 @@ unsigned long spiralPermutation(unsigned long n, unsigned long r, unsigned long 
     index = x + y*(r+1) + i*r;
   }
   return index;
-}
+}*/
 
-unsigned long *makeSpiralPermutation(unsigned long n, unsigned long r)
+unsigned long *makeSpiralPermutation(unsigned long n)
 {
-  unsigned long *spiral = calloc(r*r,sizeof(unsigned long));
-  unsigned long i;
-  for (i=0; i<r*r; i++)
-    spiral[i] = spiralPermutation(n,r,i);
+  unsigned long r = 2*n-1;
+  unsigned long H = 3*n*n-3*n+1;
+  unsigned long level;
+  unsigned long j;
+  unsigned long i = 0;
+  unsigned long index = 0;
+
+  unsigned long *spiral = calloc(H,sizeof(unsigned long));
+
+  for (level = n-1; level != 0 ;level--) {
+    for (j = 0; j < level; j++) {
+      spiral[i++] = index++;
+    }
+
+    for (j = 0; j < level; j++) {
+      spiral[i++] = index;
+      index+=r+1;
+    }
+
+    for (j = 0; j < level; j++) {
+      spiral[i++] = index;
+      index+=r;
+    }
+
+    for (j = 0; j < level; j++) {
+      spiral[i++] = index--;
+    }
+
+    for (j = 0; j < level; j++) {
+      spiral[i++] = index;
+      index-=r+1;
+    }
+
+    for (j = 0; j < level; j++) {
+      spiral[i++] = index;
+      index-=r;
+    }
+
+    index += r+1;
+  }
+
+  spiral[i] = index;
+
   return spiral;
 }
 
@@ -377,7 +416,7 @@ int main(int argc, char *argv[])
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(n,d,hexagon,0,makeSpiralPermutation(n,2*n-1));
+  labeling(n,d,hexagon,0,makeSpiralPermutation(n));
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
