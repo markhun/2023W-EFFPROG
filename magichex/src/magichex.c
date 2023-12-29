@@ -327,9 +327,10 @@ void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long ind
 {
   long i;
   unsigned long r = 2*n-1;
+  unsigned long H = 3*n*n-3*n+1;
   unsigned long entryIndex = order[index];
   HexagonEntry *hexagonEntry = &hexagon[entryIndex];
-  if (index >= r*r) {
+  if (index >= H) {
     printhexagon(n,hexagon);
     solutions++;
     leafs++;
