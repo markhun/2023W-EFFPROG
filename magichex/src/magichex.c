@@ -253,13 +253,34 @@ void printhexagon(unsigned long n, HexagonEntry hexagon[])
   }
 }
 
+unsigned long spiralPermutation(unsigned long n, unsigned long r, unsigned long i)
+{
+  unsigned long index;
+
+  if (n == 1) {
+    index = 0;
+  } else if (i >= 6*(n-1)) {
+    index = spiralPermutation(n-1,r,i-6*(n-1))+r+1;
+  } else if (i >= 3*(n-1)) {
+    index = (r+1)*(2*n-2) - spiralPermutation(n,r,i-3*(n-1));
+  } else {
+    int x = i < n ? i : n-1;
+    i -= x;
+    int y = i < n ? i : n-1;
+    i -= y;
+    index = x + y*(r+1) + i*r;
+  }
+  return index;
+}
+
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
 void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index)
 {
   long i;
   unsigned long r = 2*n-1;
-  HexagonEntry *hexagonEntry = &hexagon[index];
+  unsigned long entryIndex = spiralPermutation(n,r,index);
+  HexagonEntry *hexagonEntry = &hexagon[entryIndex];
   if (index >= r*r) {
     printhexagon(n,hexagon);
     solutions++;
@@ -272,7 +293,7 @@ void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long ind
     return labeling(n,d,hexagon,index+1); 
   for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
     HexagonEntry newHexagon[r*r];
-    HexagonEntry* newHexagonEntry = &newHexagon[index];
+    HexagonEntry* newHexagonEntry = &newHexagon[entryIndex];
     memmove(newHexagon,hexagon,r*r*sizeof(HexagonEntry));
     newHexagonEntry->lo = i;
     newHexagonEntry->hi = i;
