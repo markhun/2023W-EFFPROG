@@ -321,6 +321,41 @@ unsigned long *makeSpiralPermutation(unsigned long n)
   return spiral;
 }
 
+unsigned long *makeWheelPermutation(unsigned long n)
+{
+  unsigned long r = 2*n-1;
+  unsigned long H = 3*n*n-3*n+1;
+  unsigned long level;
+  unsigned long layer;
+  unsigned long i = 0;
+  unsigned long index;
+
+  unsigned long *wheel = calloc(H,sizeof(unsigned long));
+
+  for (level = 0; level < n - 1; level++) {
+    index = level;
+    for(layer = n-1; level < layer; layer--) {
+      wheel[i++] = index;
+      index += (layer-level) + level*(r+1);
+      wheel[i++] = index;
+      index += (layer-level)*(r+1) + level*r;
+      wheel[i++] = index;
+      index += (layer-level)*r - level;
+      wheel[i++] = index;
+      index -= (layer-level) + level*(r+1);
+      wheel[i++] = index;
+      index -= (layer-level)*(r+1) + level*r;
+      wheel[i++] = index;
+      index += -(layer-level)*r + level + r + 1;
+    }
+    if (level == 0) {
+      wheel[i++] = index;
+    }
+  }
+
+  return wheel;
+}
+
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
 void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index, unsigned long *order)
@@ -417,7 +452,7 @@ int main(int argc, char *argv[])
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(n,d,hexagon,0,makeSpiralPermutation(n));
+  labeling(n,d,hexagon,0,makeWheelPermutation(n));
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
