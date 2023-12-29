@@ -273,13 +273,22 @@ unsigned long spiralPermutation(unsigned long n, unsigned long r, unsigned long 
   return index;
 }
 
+unsigned long *makeSpiralPermutation(unsigned long n, unsigned long r)
+{
+  unsigned long *spiral = calloc(r*r,sizeof(unsigned long));
+  unsigned long i;
+  for (i=0; i<r*r; i++)
+    spiral[i] = spiralPermutation(n,r,i);
+  return spiral;
+}
+
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
-void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index)
+void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index, unsigned long *order)
 {
   long i;
   unsigned long r = 2*n-1;
-  unsigned long entryIndex = spiralPermutation(n,r,index);
+  unsigned long entryIndex = order[index];
   HexagonEntry *hexagonEntry = &hexagon[entryIndex];
   if (index >= r*r) {
     printhexagon(n,hexagon);
@@ -290,7 +299,7 @@ void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long ind
   }
   if (hexagonEntry->id == PLACEHOLDER_ENTRY_ID)
     // call labeling again as we do not need to process placeholders
-    return labeling(n,d,hexagon,index+1); 
+    return labeling(n,d,hexagon,index+1,order); 
   for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
     HexagonEntry newHexagon[r*r];
     HexagonEntry* newHexagonEntry = &newHexagon[entryIndex];
@@ -307,7 +316,7 @@ void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long ind
     printf("\n");
 #endif
     if (solve(n,d,newHexagon))
-      labeling(n,d,newHexagon,index+1);
+      labeling(n,d,newHexagon,index+1,order);
     else
       leafs++;
   }
@@ -368,7 +377,7 @@ int main(int argc, char *argv[])
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(n,d,hexagon,0);
+  labeling(n,d,hexagon,0,makeSpiralPermutation(n,2*n-1));
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
