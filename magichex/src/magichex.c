@@ -310,7 +310,6 @@ unsigned long *makeCornerSpiralPermutation()
    the constraints hold */
 void labeling(HexagonEntry hexagon[], unsigned long index, unsigned long *order)
 {
-  register long i;
   unsigned long entryIndex = order[index];
 
   HexagonEntry *hexagonEntry = &hexagon[entryIndex];
@@ -332,26 +331,31 @@ void labeling(HexagonEntry hexagon[], unsigned long index, unsigned long *order)
     return labeling(hexagon,index+1,order);
 
 
-  for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
-    HexagonEntry newHexagon[number_hex_entries];
-    HexagonEntry* newHexagonEntry = &newHexagon[entryIndex];
-    memmove(newHexagon,hexagon,number_hex_entries*sizeof(HexagonEntry));
-    newHexagonEntry->lo = i;
-    newHexagonEntry->hi = i;
-#if 0
-    for (HexagonEntry *hexagonEntry = newHexagon; hexagonEntry<=newHexagonEntry; hexagonEntry++) {
-      if (hexagonEntry->id != PLACEHOLDER_ENTRY_ID) {
-        assert(hexagonEntry->lo == hexagonEntry->hi);
-        printf(" %ld",hexagonEntry->lo); fflush(stdout);
-      }
-    }
-    printf("\n");
-#endif
-    if (solve(newHexagon))
-      labeling(newHexagon,index+1,order);
-    else
-      leafs++;
+
+  HexagonEntry newHexagon[r*r];
+  // bisect the range [lo,hi] to new Hexagons and recurse on them.
+  long midpoint = (hexagonEntry->lo + hexagonEntry->hi)/2;
+  if(hexagonEntry->lo + hexagonEntry->hi < 0 && (hexagonEntry->lo + hexagonEntry->hi) % 2 != 0){
+    midpoint--;  // nudge midpoint for negative values to avoid endless recursion
   }
+  // Initalize newHexagon to hexagon to explore lower halve of original range [lo,hi]
+  memmove(newHexagon,hexagon,number_hex_entries*sizeof(HexagonEntry));
+  newHexagon[entryIndex].lo = hexagonEntry->lo;
+  newHexagon[entryIndex].hi = midpoint;
+  if (solve(newHexagon)) {
+    labeling(newHexagon,index,order);
+  }
+  else
+    leafs++;
+  // Initalize newHexagon to hexagon to explore upper halve of original range [lo,hi]
+  memmove(newHexagon,hexagon,number_hex_entries*sizeof(HexagonEntry));
+  newHexagon[entryIndex].lo = midpoint+1;
+  newHexagon[entryIndex].hi = hexagonEntry->hi;
+  if (solve(newHexagon)) {
+    labeling(newHexagon,index,order); 
+    }
+  else
+    leafs++;
 }
 
 HexagonEntry *makehexagon()
