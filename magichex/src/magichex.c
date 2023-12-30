@@ -48,7 +48,6 @@ static long d;
 static unsigned long r;
 static unsigned long H;
 static unsigned long M;
-//static unsigned long *order;
 
 unsigned long solutions = 0; /* counter of solutions */
 unsigned long leafs = 0; /* counter of leaf nodes visited in the search tree */
@@ -397,7 +396,6 @@ int main(int argc, char *argv[])
   number_hex_entries = r*r;
   H = 3*n*n-3*n+1;
   M = d*H;
-  //order = makeCornerSpiralPermutation();
 
   HexagonEntry *hexagon = makehexagon();
   for (i=3; i<argc; i++) {
