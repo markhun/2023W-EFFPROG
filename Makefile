@@ -1,7 +1,7 @@
 # Makefile settings
 CC      = cc
 RM      = rm -f
-CFLAGS	=-Wall -O3 -DNDEBUG
+CFLAGS	=-Wall -O3 -DNDEBUG -march=native -fwhole-program
 # CFLAGS =-Wall -ggdb -O0 -fno-omit-frame-pointer 
 LD		= cc
 LDFLAGS	=-g
