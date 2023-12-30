@@ -42,6 +42,13 @@ typedef struct hexagonEntry HexagonEntry;
    lowest  value = dr - (H-1)/2
    highest value = dr + (H-1)/2
 */
+static long n;
+static long number_hex_entries;
+static long d;
+static unsigned long r;
+static unsigned long H;
+static unsigned long M;
+static unsigned long *order;
 
 unsigned long solutions = 0; /* counter of solutions */
 unsigned long leafs = 0; /* counter of leaf nodes visited in the search tree */
@@ -104,12 +111,12 @@ CHANGE_IDENTIFIER lessthan(HexagonEntry *v1, HexagonEntry *v2)
   return (setlo(v2, v1->lo+1));
 }
 
-CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long stride, long sum,
+CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long stride,
         HexagonEntry *hexagonStart, HexagonEntry *hexagonEnd)
 {
-  unsigned long i;
-  long hi = sum;
-  long lo = sum;
+  register unsigned long i;
+  long hi = M;
+  long lo = M;
   HexagonEntry *hexagonEntry_p;
 #if 0
   printf("sum(hexagonStart+%ld, %lu, %lu, %ld, hexagonStart, hexagonStart+%ld)   ",hexagon-hexagonStart,nv,stride,sum,hexagonEnd-hexagonStart); fflush(stdout);
@@ -146,25 +153,22 @@ CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long st
 /* reduce the ranges of the variables as much as possible (with the
    constraints we use);  returns 1 if all variables still have a
    non-empty range left, 0 if one has an empty range */
-bool solve(unsigned long n, long d, HexagonEntry hexagon[])
+bool solve(HexagonEntry hexagon[])
 {
-  unsigned long r = 2*n-1;
-  unsigned long H = 3*n*n-3*n+1;
-  long M = d*H;
   long o = d*r - (H-1)/2; /* offset in occupation array */
   unsigned long occupation[H]; /* if hexagon[i] has value x, occupation[x-o]==i, 
                                   if no hexagon[*] has value x, occupation[x-o]==H */
   unsigned long corners[] = {0, n-1, (n-1)*r+0, (n-1)*r+r-1, (r-1)*r+n-1, (r-1)*r+r-1};
-  unsigned long i;
+  register unsigned long i;
   //printf("(re)start\n");
   /* deal with the alldifferent constraint */
   for (i=0; i<H; i++)
-    occupation[i] = r*r;
+    occupation[i] = number_hex_entries;
  restart:
-  for (i=0; i<r*r; i++) {
+  for (i=0; i<number_hex_entries; i++) {
     HexagonEntry *hexagonEntry = &hexagon[i];
     if (hexagonEntry->lo == hexagonEntry->hi && occupation[hexagonEntry->lo-o] != i) {
-      if (occupation[hexagonEntry->lo-o] < r*r)
+      if (occupation[hexagonEntry->lo-o] < number_hex_entries)
         return false; /* another variable has the same value */
       occupation[hexagonEntry->lo-o] = i; /* occupy hexagonEntry->lo */
       //goto restart;
@@ -172,14 +176,14 @@ bool solve(unsigned long n, long d, HexagonEntry hexagon[])
   }
   bool k = false;
   /* now propagate the alldifferent results to the bounds */
-  for (i=0; i<r*r; i++) {
+  for (i=0; i<number_hex_entries; i++) {
     HexagonEntry *hexagonEntry = &hexagon[i];
     if (hexagonEntry->lo < hexagonEntry->hi) {
-      if (occupation[hexagonEntry->lo-o] < r*r) {
+      if (occupation[hexagonEntry->lo-o] < number_hex_entries) {
         hexagonEntry->lo++;
         k = true;
       }
-      if (occupation[hexagonEntry->hi-o] < r*r) {
+      if (occupation[hexagonEntry->hi-o] < number_hex_entries) {
         hexagonEntry->hi--;
         k = true;
       }
@@ -207,25 +211,25 @@ bool solve(unsigned long n, long d, HexagonEntry hexagon[])
   for (i=0; i<r; i++) {
     CHANGE_IDENTIFIER f;
     /* line */
-    f = sum(hexagon+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, M, hexagon, hexagon+r*r);
+    f = sum(hexagon+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
     /* column (diagonal down-left in the hexagon) */
-    f = sum(hexagon+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, M, hexagon, hexagon+r*r);
+    f = sum(hexagon+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
     /* diagonal (down-right) */
-    f = sum(hexagon-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, M, hexagon, hexagon+r*r);
+    f = sum(hexagon-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
     if (f==CHANGED) goto restart;
   }
   return true;  // all done
 }
 
-void printhexagon(unsigned long n, HexagonEntry hexagon[])
+void printhexagon(HexagonEntry hexagon[])
 {
-  unsigned long i,j;
-  unsigned r=2*n-1;
+  register unsigned long i,j;
+
   for (i=0; i<r; i++) {
     unsigned long l=0;
     unsigned long h=r;
@@ -253,77 +257,34 @@ void printhexagon(unsigned long n, HexagonEntry hexagon[])
   }
 }
 
-/*unsigned long spiralPermutation(unsigned long n, unsigned long r, unsigned long i)
+/* make a spiral permutation of the hexagon variables */
+unsigned long *makeSpiralPermutation()
 {
-  unsigned long index;
-
-  if (n == 1) {
-    index = 0;
-  } else if (i >= 6*(n-1)) {
-    index = spiralPermutation(n-1,r,i-6*(n-1))+r+1;
-  } else if (i >= 3*(n-1)) {
-    index = (r+1)*(2*n-2) - spiralPermutation(n,r,i-3*(n-1));
-  } else {
-    int x = i < n ? i : n-1;
-    i -= x;
-    int y = i < n ? i : n-1;
-    i -= y;
-    index = x + y*(r+1) + i*r;
-  }
-  return index;
-}*/
-
-unsigned long *makeSpiralPermutation(unsigned long n)
-{
-  unsigned long r = 2*n-1;
-  unsigned long H = 3*n*n-3*n+1;
   unsigned long level;
   unsigned long j;
   unsigned long i = 0;
   unsigned long index = 0;
 
   unsigned long *spiral = calloc(H,sizeof(unsigned long));
+  unsigned long steps[] = {1, r+1, r, -1, -r-1, -r};
 
   for (level = n-1; level != 0 ;level--) {
-    for (j = 0; j < level; j++) {
-      spiral[i++] = index++;
-    }
-
-    for (j = 0; j < level; j++) {
+    for(j = 0; j < 6 * level; j++) {
       spiral[i++] = index;
-      index+=r+1;
+      index += steps[j/level];
     }
-
-    for (j = 0; j < level; j++) {
-      spiral[i++] = index;
-      index+=r;
-    }
-
-    for (j = 0; j < level; j++) {
-      spiral[i++] = index--;
-    }
-
-    for (j = 0; j < level; j++) {
-      spiral[i++] = index;
-      index-=r+1;
-    }
-
-    for (j = 0; j < level; j++) {
-      spiral[i++] = index;
-      index-=r;
-    }
-
     index += r+1;
   }
 
   spiral[i] = index;
-
   return spiral;
 }
 
-unsigned long *makeCornerSpiralPermutation(unsigned long n)
+/* make a spiral permutation of the hexagon variables with the corners
+   in the first six entries */
+unsigned long *makeCornerSpiralPermutation()
 {
-  unsigned long *spiral = makeSpiralPermutation(n);
+  unsigned long *spiral = makeSpiralPermutation();
   long i;
   long j;
   long k;
@@ -348,15 +309,14 @@ unsigned long *makeCornerSpiralPermutation(unsigned long n)
 
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
-void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index, unsigned long *order)
+void labeling(HexagonEntry hexagon[], unsigned long index)
 {
-  long i;
-  unsigned long r = 2*n-1;
-  unsigned long H = 3*n*n-3*n+1;
+  register long i;
   unsigned long entryIndex = order[index];
+
   HexagonEntry *hexagonEntry = &hexagon[entryIndex];
   if (index >= H) {
-    printhexagon(n,hexagon);
+    printhexagon(hexagon);
     solutions++;
     leafs++;
     printf("leafs visited: %lu\n\n",leafs);
@@ -364,11 +324,11 @@ void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long ind
   }
   if (hexagonEntry->id == PLACEHOLDER_ENTRY_ID)
     // call labeling again as we do not need to process placeholders
-    return labeling(n,d,hexagon,index+1,order); 
+    return labeling(hexagon,index+1); 
   for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
-    HexagonEntry newHexagon[r*r];
+    HexagonEntry newHexagon[number_hex_entries];
     HexagonEntry* newHexagonEntry = &newHexagon[entryIndex];
-    memmove(newHexagon,hexagon,r*r*sizeof(HexagonEntry));
+    memmove(newHexagon,hexagon,number_hex_entries*sizeof(HexagonEntry));
     newHexagonEntry->lo = i;
     newHexagonEntry->hi = i;
 #if 0
@@ -380,22 +340,21 @@ void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long ind
     }
     printf("\n");
 #endif
-    if (solve(n,d,newHexagon))
-      labeling(n,d,newHexagon,index+1,order);
+    if (solve(newHexagon))
+      labeling(newHexagon,index+1);
     else
       leafs++;
   }
 }
 
-HexagonEntry *makehexagon(unsigned long n, long d)
+HexagonEntry *makehexagon()
 {
-  unsigned long i,j;
-  unsigned long r = 2*n-1;
-  unsigned long H = 3*n*n-3*n+1;
+  register unsigned long i,j;
+
   
-  HexagonEntry *hexagon = calloc(r*r,sizeof(HexagonEntry));
+  HexagonEntry *hexagon = calloc(number_hex_entries,sizeof(HexagonEntry));
   unsigned long id = 0;
-  for (i=0; i<r*r; i++) {
+  for (i=0; i<number_hex_entries; i++) {
     hexagon[i].id = PLACEHOLDER_ENTRY_ID;
     hexagon[i].lo = 1;
     hexagon[i].hi = 0;
@@ -421,10 +380,9 @@ HexagonEntry *makehexagon(unsigned long n, long d)
 
 int main(int argc, char *argv[])
 {
-  unsigned long i;
-  unsigned long j=0;
-  unsigned long n;
-  long d;
+  register unsigned long i;
+  register unsigned long j=0;
+
   if (argc < 3) {
     fprintf(stderr, "Usage: %s <order> <deviation> <value> ... <value>\n", argv[0]);
     exit(1);
@@ -435,14 +393,20 @@ int main(int argc, char *argv[])
     exit(1);
   }
   d = strtol(argv[2],NULL,10);
-  HexagonEntry *hexagon = makehexagon(n,d);
+  r = 2*n-1;
+  number_hex_entries = r*r;
+  H = 3*n*n-3*n+1;
+  M = d*H;
+  order = makeCornerSpiralPermutation();
+
+  HexagonEntry *hexagon = makehexagon();
   for (i=3; i<argc; i++) {
     while (hexagon[j].id == PLACEHOLDER_ENTRY_ID)
       j++; // skip this entry as it is a placeholder
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(n,d,hexagon,0,makeCornerSpiralPermutation(n));
+  labeling(hexagon,0);
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
