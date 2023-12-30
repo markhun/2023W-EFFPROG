@@ -314,16 +314,24 @@ void labeling(HexagonEntry hexagon[], unsigned long index, unsigned long *order)
   unsigned long entryIndex = order[index];
 
   HexagonEntry *hexagonEntry = &hexagon[entryIndex];
+
   if (index >= H) {
+    // All hexagonEntries fully constrained, print solution.
     printhexagon(hexagon);
     solutions++;
     leafs++;
     printf("leafs visited: %lu\n\n",leafs);
     return;
   }
+
   if (hexagonEntry->id == PLACEHOLDER_ENTRY_ID)
-    // call labeling again as we do not need to process placeholders
+    // Do not process placeholder entries, continue to next hexagon index.
     return labeling(hexagon,index+1,order); 
+  if(hexagonEntry->lo == hexagonEntry->hi)
+    // hexagonEntry already fully constrained, continue to next hexagon index.
+    return labeling(hexagon,index+1,order);
+
+
   for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
     HexagonEntry newHexagon[number_hex_entries];
     HexagonEntry* newHexagonEntry = &newHexagon[entryIndex];
