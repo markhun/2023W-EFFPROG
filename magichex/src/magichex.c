@@ -48,7 +48,7 @@ static long d;
 static unsigned long r;
 static unsigned long H;
 static unsigned long M;
-static unsigned long *order;
+//static unsigned long *order;
 
 unsigned long solutions = 0; /* counter of solutions */
 unsigned long leafs = 0; /* counter of leaf nodes visited in the search tree */
@@ -309,7 +309,7 @@ unsigned long *makeCornerSpiralPermutation()
 
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
-void labeling(HexagonEntry hexagon[], unsigned long index)
+void labeling(HexagonEntry hexagon[], unsigned long index, unsigned long *order)
 {
   register long i;
   unsigned long entryIndex = order[index];
@@ -324,7 +324,7 @@ void labeling(HexagonEntry hexagon[], unsigned long index)
   }
   if (hexagonEntry->id == PLACEHOLDER_ENTRY_ID)
     // call labeling again as we do not need to process placeholders
-    return labeling(hexagon,index+1); 
+    return labeling(hexagon,index+1,order); 
   for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
     HexagonEntry newHexagon[number_hex_entries];
     HexagonEntry* newHexagonEntry = &newHexagon[entryIndex];
@@ -341,7 +341,7 @@ void labeling(HexagonEntry hexagon[], unsigned long index)
     printf("\n");
 #endif
     if (solve(newHexagon))
-      labeling(newHexagon,index+1);
+      labeling(newHexagon,index+1,order);
     else
       leafs++;
   }
@@ -397,7 +397,7 @@ int main(int argc, char *argv[])
   number_hex_entries = r*r;
   H = 3*n*n-3*n+1;
   M = d*H;
-  order = makeCornerSpiralPermutation();
+  //order = makeCornerSpiralPermutation();
 
   HexagonEntry *hexagon = makehexagon();
   for (i=3; i<argc; i++) {
@@ -406,7 +406,7 @@ int main(int argc, char *argv[])
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(hexagon,0);
+  labeling(hexagon,0,makeCornerSpiralPermutation());
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
