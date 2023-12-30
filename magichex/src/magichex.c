@@ -321,6 +321,31 @@ unsigned long *makeSpiralPermutation(unsigned long n)
   return spiral;
 }
 
+unsigned long *makeCornerSpiralPermutation(unsigned long n)
+{
+  unsigned long *spiral = makeSpiralPermutation(n);
+  long i;
+  long j;
+  long k;
+  
+  if (n > 2) {
+    unsigned long corners[6];
+    for (i=0; i<6; i++) {
+      corners[i] = spiral[i*(n-1)];
+    }
+    for (i=4*(n-1)+1, j=i+1; i>0; i-=(n-1),j-=(n-2)) {
+      for (k=n-3; k>=0; k--) {
+        spiral[j+k] = spiral[i+k];
+      } 
+    }
+    for (i=0; i<6; i++) {
+      spiral[i] = corners[i];
+    }
+  }
+
+  return spiral;
+}
+
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
 void labeling(unsigned long n, long d, HexagonEntry hexagon[], unsigned long index, unsigned long *order)
@@ -417,7 +442,7 @@ int main(int argc, char *argv[])
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(n,d,hexagon,0,makeSpiralPermutation(n));
+  labeling(n,d,hexagon,0,makeCornerSpiralPermutation(n));
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
