@@ -113,7 +113,7 @@ CHANGE_IDENTIFIER lessthan(HexagonEntry *v1, HexagonEntry *v2)
 CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long stride,
         HexagonEntry *hexagonStart, HexagonEntry *hexagonEnd)
 {
-  unsigned long i;
+  register unsigned long i;
   long hi = M;
   long lo = M;
   HexagonEntry *hexagonEntry_p;
@@ -158,7 +158,7 @@ bool solve(HexagonEntry hexagon[])
   unsigned long occupation[H]; /* if hexagon[i] has value x, occupation[x-o]==i, 
                                   if no hexagon[*] has value x, occupation[x-o]==H */
   unsigned long corners[] = {0, n-1, (n-1)*r+0, (n-1)*r+r-1, (r-1)*r+n-1, (r-1)*r+r-1};
-  unsigned long i;
+  register unsigned long i;
   //printf("(re)start\n");
   /* deal with the alldifferent constraint */
   for (i=0; i<H; i++)
@@ -227,7 +227,7 @@ bool solve(HexagonEntry hexagon[])
 
 void printhexagon(HexagonEntry hexagon[])
 {
-  unsigned long i,j;
+  register unsigned long i,j;
 
   for (i=0; i<r; i++) {
     unsigned long l=0;
@@ -260,7 +260,7 @@ void printhexagon(HexagonEntry hexagon[])
    the constraints hold */
 void labeling(HexagonEntry hexagon[], unsigned long index)
 {
-  long i;
+  register long i;
 
   HexagonEntry *hexagonEntry = &hexagon[index];
   if (index >= number_hex_entries) {
@@ -297,7 +297,7 @@ void labeling(HexagonEntry hexagon[], unsigned long index)
 
 HexagonEntry *makehexagon()
 {
-  unsigned long i,j;
+  register unsigned long i,j;
 
   
   HexagonEntry *hexagon = calloc(number_hex_entries,sizeof(HexagonEntry));
@@ -328,8 +328,8 @@ HexagonEntry *makehexagon()
 
 int main(int argc, char *argv[])
 {
-  unsigned long i;
-  unsigned long j=0;
+  register unsigned long i;
+  register unsigned long j=0;
 
   if (argc < 3) {
     fprintf(stderr, "Usage: %s <order> <deviation> <value> ... <value>\n", argv[0]);
