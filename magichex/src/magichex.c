@@ -212,15 +212,18 @@ bool solve(HexagonEntry hexagon[])
     /* line */
     f = sum(hexagon+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
-    if (f==CHANGED) goto restart;
+    if (f==CHANGED) k = true;
     /* column (diagonal down-left in the hexagon) */
     f = sum(hexagon+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
-    if (f==CHANGED) goto restart;
+    if (f==CHANGED) k = true;
     /* diagonal (down-right) */
     f = sum(hexagon-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
-    if (f==CHANGED) goto restart;
+    if (f==CHANGED) k = true;
+  }
+  if(k){
+    goto restart;
   }
   return true;  // all done
 }
