@@ -256,14 +256,65 @@ void printhexagon(HexagonEntry hexagon[])
   }
 }
 
+/* make a spiral permutation of the hexagon variables */
+unsigned long *makeSpiralPermutation()
+{
+  unsigned long level;
+  unsigned long j;
+  unsigned long i = 0;
+  unsigned long index = 0;
+
+  unsigned long *spiral = calloc(H,sizeof(unsigned long));
+  unsigned long steps[] = {1, r+1, r, -1, -r-1, -r};
+
+  for (level = n-1; level != 0 ;level--) {
+    for(j = 0; j < 6 * level; j++) {
+      spiral[i++] = index;
+      index += steps[j/level];
+    }
+    index += r+1;
+  }
+
+  spiral[i] = index;
+  return spiral;
+}
+
+/* make a spiral permutation of the hexagon variables with the corners
+   in the first six entries */
+unsigned long *makeCornerSpiralPermutation()
+{
+  unsigned long *spiral = makeSpiralPermutation();
+  long i;
+  long j;
+  long k;
+  
+  if (n > 2) {
+    unsigned long corners[6];
+    for (i=0; i<6; i++) {
+      corners[i] = spiral[i*(n-1)];
+    }
+    for (i=4*(n-1)+1, j=i+1; i>0; i-=(n-1),j-=(n-2)) {
+      for (k=n-3; k>=0; k--) {
+        spiral[j+k] = spiral[i+k];
+      } 
+    }
+    for (i=0; i<6; i++) {
+      spiral[i] = corners[i];
+    }
+  }
+
+  return spiral;
+}
+
 /* assign values to hexagon[index] and all later variables in hexagon such that
    the constraints hold */
-void labeling(HexagonEntry hexagon[], unsigned long index)
+void labeling(HexagonEntry hexagon[], unsigned long index, unsigned long *order)
 {
   register long i;
+  unsigned long entryIndex = order[index];
 
-  HexagonEntry *hexagonEntry = &hexagon[index];
-  if (index >= number_hex_entries) {
+  HexagonEntry *hexagonEntry = &hexagon[entryIndex];
+  if (index >= H) {
     printhexagon(hexagon);
     solutions++;
     leafs++;
@@ -272,10 +323,10 @@ void labeling(HexagonEntry hexagon[], unsigned long index)
   }
   if (hexagonEntry->id == PLACEHOLDER_ENTRY_ID)
     // call labeling again as we do not need to process placeholders
-    return labeling(hexagon,index+1); 
+    return labeling(hexagon,index+1,order); 
   for (i = hexagonEntry->lo; i <= hexagonEntry->hi; i++) {
     HexagonEntry newHexagon[number_hex_entries];
-    HexagonEntry* newHexagonEntry = &newHexagon[index];
+    HexagonEntry* newHexagonEntry = &newHexagon[entryIndex];
     memmove(newHexagon,hexagon,number_hex_entries*sizeof(HexagonEntry));
     newHexagonEntry->lo = i;
     newHexagonEntry->hi = i;
@@ -289,7 +340,7 @@ void labeling(HexagonEntry hexagon[], unsigned long index)
     printf("\n");
 #endif
     if (solve(newHexagon))
-      labeling(newHexagon,index+1);
+      labeling(newHexagon,index+1,order);
     else
       leafs++;
   }
@@ -353,7 +404,7 @@ int main(int argc, char *argv[])
     hexagon[j].lo = hexagon[j].hi = strtol(argv[i],NULL,10);
     j++;
   }
-  labeling(hexagon,0);
+  labeling(hexagon,0,makeCornerSpiralPermutation());
   printf("%lu solution(s), %lu leafs visited\n",solutions, leafs);
   //(void)solve(n, d, hexagon);
   //printhexagon(n, hexagon);
