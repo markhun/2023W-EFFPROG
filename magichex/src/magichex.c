@@ -134,6 +134,10 @@ CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long st
     hi -= hexagonEntry_p->lo;
     lo -= hexagonEntry_p->hi;
   }
+
+  if(hi < lo){
+    return NOSOLUTION;
+  }
   /* hi is the upper bound of sum-sum(hexagon), lo the lower bound */
   for (i=0, hexagonEntry_p=hexagon; i<nv; i++, hexagonEntry_p+=stride) {
     CHANGE_IDENTIFIER f = sethi(hexagonEntry_p,hi+hexagonEntry_p->lo); /* readd hexagonEntry_p->lo to get an upper bound of hexagonEntry_p */
