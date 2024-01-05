@@ -79,10 +79,10 @@ CHANGE_IDENTIFIER sethi(HexagonEntry *hexagonEntry, long x) {
   assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
   if (x < hexagonEntry->hi) {
     hexagonEntry->hi = x;
-    if (hexagonEntry->lo <= hexagonEntry->hi)
-      return CHANGED;
+    if (hexagonEntry->lo > hexagonEntry->hi)
+      return NOSOLUTION;
     else
-      return NOCHANGE;
+      return CHANGED;
   }
   return NOCHANGE;
 }
@@ -91,10 +91,10 @@ CHANGE_IDENTIFIER setlo(HexagonEntry *hexagonEntry, long x) {
   assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
   if (x > hexagonEntry->lo) {
     hexagonEntry->lo = x;
-    if (hexagonEntry->lo <= hexagonEntry->hi)
-      return CHANGED;
-    else
+    if (hexagonEntry->lo > hexagonEntry->hi)
       return NOSOLUTION;
+    else
+      return CHANGED;
   }
   return NOCHANGE;
 }
