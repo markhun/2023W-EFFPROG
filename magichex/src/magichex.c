@@ -337,7 +337,7 @@ void labeling(HexagonEntry hexagon[], unsigned long index, unsigned long *order)
 
   HexagonEntry newHexagon[r*r];
   // bisect the range [lo,hi] to new Hexagons and recurse on them.
-  long midpoint = (hexagonEntry->lo + hexagonEntry->hi) >> 1;
+  long midpoint = (hexagonEntry->lo + hexagonEntry->hi)/2;
   if(hexagonEntry->lo + hexagonEntry->hi < 0 && (hexagonEntry->lo + hexagonEntry->hi) % 2 != 0){
     midpoint--;  // nudge midpoint for negative values to avoid endless recursion
   }
