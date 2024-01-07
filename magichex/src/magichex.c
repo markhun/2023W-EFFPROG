@@ -174,22 +174,26 @@ bool solve(HexagonEntry hexagon[])
       if (occupation[hexagonEntry->lo-o] < number_hex_entries)
         return false; /* another variable has the same value */
       occupation[hexagonEntry->lo-o] = i; /* occupy hexagonEntry->lo */
+      //goto restart;
     }
   }
-  bool update_boundaries = false;
+  bool k = false;
   /* now propagate the alldifferent results to the bounds */
   for (i=0; i<number_hex_entries; i++) {
     HexagonEntry *hexagonEntry = &hexagon[i];
     if (hexagonEntry->lo < hexagonEntry->hi) {
       if (occupation[hexagonEntry->lo-o] < number_hex_entries) {
         hexagonEntry->lo++;
-        update_boundaries = true;
+        k = true;
       }
       if (occupation[hexagonEntry->hi-o] < number_hex_entries) {
         hexagonEntry->hi--;
-        update_boundaries = true;
+        k = true;
       }
     }
+  }
+  if(k){
+    goto restart;
   }
   /* the < constraints; all other corners are smaller than the first
      one (eliminate rotational symmetry) */
@@ -212,17 +216,17 @@ bool solve(HexagonEntry hexagon[])
     /* line */
     f = sum(hexagon+r*i+max(0,i+1-n), min(i+n,r+n-i-1), 1, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
-    if (f==CHANGED) update_boundaries = true;
+    if (f==CHANGED) k = true;
     /* column (diagonal down-left in the hexagon) */
     f = sum(hexagon+i+max(0,i+1-n)*r, min(i+n,r+n-i-1), r, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
-    if (f==CHANGED) update_boundaries = true;
+    if (f==CHANGED) k = true;
     /* diagonal (down-right) */
     f = sum(hexagon-n+1+i+max(0,n-i-1)*(r+1), min(i+n,r+n-i-1), r+1, hexagon, hexagon+number_hex_entries);
     if (f==NOSOLUTION) return false;
-    if (f==CHANGED) update_boundaries = true;
+    if (f==CHANGED) k = true;
   }
-  if(update_boundaries){
+  if(k){
     goto restart;
   }
   return true;  // all done
