@@ -79,10 +79,10 @@ CHANGE_IDENTIFIER sethi(HexagonEntry *hexagonEntry, long x) {
   assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
   if (x < hexagonEntry->hi) {
     hexagonEntry->hi = x;
-    if (hexagonEntry->lo <= hexagonEntry->hi)
-      return CHANGED;
+    if (hexagonEntry->lo > hexagonEntry->hi)
+      return NOSOLUTION;
     else
-      return NOCHANGE;
+      return CHANGED;
   }
   return NOCHANGE;
 }
@@ -91,10 +91,10 @@ CHANGE_IDENTIFIER setlo(HexagonEntry *hexagonEntry, long x) {
   assert(hexagonEntry->id != PLACEHOLDER_ENTRY_ID);
   if (x > hexagonEntry->lo) {
     hexagonEntry->lo = x;
-    if (hexagonEntry->lo <= hexagonEntry->hi)
-      return CHANGED;
-    else
+    if (hexagonEntry->lo > hexagonEntry->hi)
       return NOSOLUTION;
+    else
+      return CHANGED;
   }
   return NOCHANGE;
 }
@@ -133,6 +133,10 @@ CHANGE_IDENTIFIER sum(HexagonEntry hexagon[], unsigned long nv, unsigned long st
     assert(hexagonEntry_p->id != PLACEHOLDER_ENTRY_ID);
     hi -= hexagonEntry_p->lo;
     lo -= hexagonEntry_p->hi;
+  }
+
+  if(hi < lo){
+    return NOSOLUTION;
   }
   /* hi is the upper bound of sum-sum(hexagon), lo the lower bound */
   for (i=0, hexagonEntry_p=hexagon; i<nv; i++, hexagonEntry_p+=stride) {
